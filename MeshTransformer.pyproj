@@ -1,0 +1,98 @@
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>771eeefc-06a0-4f10-a713-174945646ab5</ProjectGuid>
+    <ProjectHome>.</ProjectHome>
+    <StartupFile>metro\tools\end2end_inference_bodymesh.py</StartupFile>
+    <SearchPath>transformers\pytorch_transformers\</SearchPath>
+    <WorkingDirectory>.</WorkingDirectory>
+    <OutputPath>.</OutputPath>
+    <Name>MeshTransformer</Name>
+    <RootNamespace>MeshTransformer</RootNamespace>
+    <SuppressEnvironmentCreationPrompt>True</SuppressEnvironmentCreationPrompt>
+    <LaunchProvider>Standard Python launcher</LaunchProvider>
+    <CommandLineArguments>--resume_checkpoint ./models/metro_release/metro_3dpw_state_dict.bin --image_file_or_path ./samples/human-body</CommandLineArguments>
+    <EnableNativeCodeDebugging>False</EnableNativeCodeDebugging>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <DebugSymbols>true</DebugSymbols>
+    <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <DebugSymbols>true</DebugSymbols>
+    <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="MeshTransformer.py" />
+    <Compile Include="metro\datasets\build.py" />
+    <Compile Include="metro\datasets\hand_mesh_tsv.py" />
+    <Compile Include="metro\datasets\human_mesh_tsv.py" />
+    <Compile Include="metro\datasets\__init__.py" />
+    <Compile Include="metro\modeling\bert\file_utils.py" />
+    <Compile Include="metro\modeling\bert\modeling_bert.py" />
+    <Compile Include="metro\modeling\bert\modeling_metro.py" />
+    <Compile Include="metro\modeling\bert\modeling_utils.py" />
+    <Compile Include="metro\modeling\bert\__init__.py" />
+    <Compile Include="metro\modeling\data\config.py" />
+    <Compile Include="metro\modeling\hrnet\config\default.py" />
+    <Compile Include="metro\modeling\hrnet\config\models.py" />
+    <Compile Include="metro\modeling\hrnet\config\__init__.py" />
+    <Compile Include="metro\modeling\hrnet\hrnet_cls_net.py" />
+    <Compile Include="metro\modeling\hrnet\hrnet_cls_net_featmaps.py" />
+    <Compile Include="metro\modeling\_mano.py" />
+    <Compile Include="metro\modeling\_smpl.py" />
+    <Compile Include="metro\modeling\__init__.py" />
+    <Compile Include="metro\tools\end2end_inference_bodymesh.py" />
+    <Compile Include="metro\tools\end2end_inference_handmesh.py" />
+    <Compile Include="metro\tools\run_hand_multiscale.py" />
+    <Compile Include="metro\tools\run_metro_bodymesh.py" />
+    <Compile Include="metro\tools\run_metro_handmesh.py" />
+    <Compile Include="metro\tools\tsv_demo.py" />
+    <Compile Include="metro\utils\comm.py" />
+    <Compile Include="metro\utils\dataset_utils.py" />
+    <Compile Include="metro\utils\geometric_layers.py" />
+    <Compile Include="metro\utils\image_ops.py" />
+    <Compile Include="metro\utils\logger.py" />
+    <Compile Include="metro\utils\metric_logger.py" />
+    <Compile Include="metro\utils\metric_pampjpe.py" />
+    <Compile Include="metro\utils\miscellaneous.py" />
+    <Compile Include="metro\utils\renderer.py" />
+    <Compile Include="metro\utils\smpl_loader_util.py" />
+    <Compile Include="metro\utils\tsv_file.py" />
+    <Compile Include="metro\utils\tsv_file_ops.py" />
+    <Compile Include="metro\utils\__init__.py" />
+    <Compile Include="metro\__init__.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="metro\" />
+    <Folder Include="metro\datasets\" />
+    <Folder Include="metro\modeling\" />
+    <Folder Include="metro\modeling\bert\" />
+    <Folder Include="metro\modeling\bert\bert-base-uncased\" />
+    <Folder Include="metro\modeling\data\" />
+    <Folder Include="metro\modeling\hrnet\" />
+    <Folder Include="metro\modeling\hrnet\config\" />
+    <Folder Include="metro\tools\" />
+    <Folder Include="metro\utils\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="metro\modeling\bert\bert-base-uncased\config.json" />
+    <Content Include="metro\modeling\data\basicModel_neutral_lbs_10_207_0_v1.0.0.pkl" />
+    <Content Include="metro\modeling\data\J_regressor_extra.npy" />
+    <Content Include="metro\modeling\data\J_regressor_h36m_correct.npy" />
+    <Content Include="metro\modeling\data\mano_downsampling.npz" />
+    <Content Include="metro\modeling\data\MANO_RIGHT.pkl" />
+    <Content Include="metro\modeling\data\mesh_downsampling.npz" />
+    <Content Include="metro\modeling\data\README.md" />
+  </ItemGroup>
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
+  <!-- Uncomment the CoreCompile target to enable the Build command in
+       Visual Studio and specify your pre- and post-build commands in
+       the BeforeBuild and AfterBuild targets below. -->
+  <!--<Target Name="CoreCompile" />-->
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+</Project>

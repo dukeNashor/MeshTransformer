@@ -16,6 +16,11 @@ from opendr.renderer import ColoredRenderer, TexturedRenderer
 from opendr.lighting import LambertianPointLight
 import random
 
+import glfw
+
+import OpenGL.GL as GL
+import OpenGL.GL.shaders as shaders
+from OpenGL.arrays import vbo
 
 # Rotate the points by a specified angle.
 def rotateY(points, angle):
@@ -604,8 +609,293 @@ class Renderer(object):
             light_pos=rotateY(np.array([-500, 500, 1000]), yrot),
             vc=albedo,
             light_color=np.array([.7, .7, .7]))
-
+        self.renderer.set(glMode = 'glfw', overdraw=True, msaa = True, nsamples = 8, sharedWin = None)
+        flipXRotation = np.array([[1.0, 0.0, 0.0, 0.0],
+                [0.0, -1.0, 0., 0.0],
+                [0.0, 0., -1.0, 0.0],
+                [0.0, 0.0, 0.0, 1.0]])
+        self.renderer.camera.openglMat = flipXRotation #this is from setupcamera in utils
+        self.renderer.initGL()
+        #self.init_renderer(self.renderer)
         return self.renderer.r
+
+    def init_renderer(self, rn):
+
+        try:
+            rn.frustum
+            rn.f
+            rn.v
+            rn.vc
+            rn.glMode
+        except:
+            print ("Necessary variables have not been set (frustum, f, v, or vc).")
+            return
+
+        glfw.init()
+        #print("Initializing GLFW.")
+
+        glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, 3)
+        glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, 3)
+        # glfw.window_hint(glfw.OPENGL_FORWARD_COMPAT, GL.GL_TRUE)
+        glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
+        glfw.window_hint(glfw.DEPTH_BITS,32)
+
+        glfw.window_hint(glfw.VISIBLE, GL.GL_FALSE)
+        rn.win = glfw.create_window(rn.frustum['width'], rn.frustum['height'], "test",  None, rn.sharedWin)
+        glfw.make_context_current(rn.win)
+
+        GL.USE_ACCELERATE = True
+
+        GL.glViewport(0, 0, rn.frustum['width'], rn.frustum['height'])
+
+        #FBO_f
+        rn.fbo = GL.glGenFramebuffers(1)
+
+        GL.glDepthMask(GL.GL_TRUE)
+
+        GL.glBindFramebuffer(GL.GL_FRAMEBUFFER, rn.fbo)
+
+        rn.render_buf = GL.glGenRenderbuffers(1)
+        GL.glBindRenderbuffer(GL.GL_RENDERBUFFER,rn.render_buf)
+        GL.glRenderbufferStorage(GL.GL_RENDERBUFFER, GL.GL_RGB8, rn.frustum['width'], rn.frustum['height'])
+        GL.glFramebufferRenderbuffer(GL.GL_DRAW_FRAMEBUFFER, GL.GL_COLOR_ATTACHMENT0, GL.GL_RENDERBUFFER, rn.render_buf)
+
+
+        rn.z_buf = GL.glGenRenderbuffers(1)
+        GL.glBindRenderbuffer(GL.GL_RENDERBUFFER, rn.z_buf)
+        GL.glRenderbufferStorage(GL.GL_RENDERBUFFER,  GL.GL_DEPTH_COMPONENT, rn.frustum['width'], rn.frustum['height'])
+        GL.glFramebufferRenderbuffer(GL.GL_FRAMEBUFFER, GL.GL_DEPTH_ATTACHMENT, GL.GL_RENDERBUFFER, rn.z_buf)
+
+        rn.line_width = 1.
+
+        #FBO_f
+        if rn.msaa:
+            try:
+                rn.nsamples
+            except:
+                rn.nsamples = 8
+            try:
+                rn.overdraw
+            except:
+                rn.overdraw = True
+
+            rn.fbo_ms = GL.glGenFramebuffers(1)
+
+            GL.glDepthMask(GL.GL_TRUE)
+
+            GL.glBindFramebuffer(GL.GL_FRAMEBUFFER, rn.fbo_ms )
+
+            rn.render_buf_ms = GL.glGenRenderbuffers(1)
+            GL.glBindRenderbuffer(GL.GL_RENDERBUFFER,rn.render_buf_ms)
+
+            GL.glRenderbufferStorageMultisample(GL.GL_RENDERBUFFER, rn.nsamples, GL.GL_RGB8, rn.frustum['width'], rn.frustum['height'])
+            GL.glFramebufferRenderbuffer(GL.GL_DRAW_FRAMEBUFFER, GL.GL_COLOR_ATTACHMENT0, GL.GL_RENDERBUFFER, rn.render_buf_ms)
+
+            rn.z_buf_ms = GL.glGenRenderbuffers(1)
+            GL.glBindRenderbuffer(GL.GL_RENDERBUFFER, rn.z_buf_ms)
+            GL.glRenderbufferStorageMultisample(GL.GL_RENDERBUFFER, rn.nsamples, GL.GL_DEPTH_COMPONENT, rn.frustum['width'], rn.frustum['height'])
+            GL.glFramebufferRenderbuffer(GL.GL_FRAMEBUFFER, GL.GL_DEPTH_ATTACHMENT, GL.GL_RENDERBUFFER, rn.z_buf_ms)
+
+            GL.glEnable(GL.GL_DEPTH_TEST)
+            GL.glPolygonMode(GL.GL_FRONT_AND_BACK, GL.GL_FILL)
+            GL.glDisable(GL.GL_CULL_FACE)
+
+            GL.glClear(GL.GL_COLOR_BUFFER_BIT)
+            GL.glClear(GL.GL_DEPTH_BUFFER_BIT)
+
+            #print ("FRAMEBUFFER ERR: " + str(GL.glCheckFramebufferStatus(GL.GL_FRAMEBUFFER)))
+            assert (GL.glCheckFramebufferStatus(GL.GL_FRAMEBUFFER) == GL.GL_FRAMEBUFFER_COMPLETE)
+
+            GL.glBindFramebuffer(GL.GL_FRAMEBUFFER,0)
+
+        rn.fbo_noms = GL.glGenFramebuffers(1)
+
+        GL.glDepthMask(GL.GL_TRUE)
+
+        GL.glBindFramebuffer(GL.GL_FRAMEBUFFER, rn.fbo_noms )
+
+        rn.render_buf_noms = GL.glGenRenderbuffers(1)
+        GL.glBindRenderbuffer(GL.GL_RENDERBUFFER,rn.render_buf_noms)
+
+        GL.glRenderbufferStorageMultisample(GL.GL_RENDERBUFFER,0, GL.GL_RGB8, rn.frustum['width'], rn.frustum['height'])
+        GL.glFramebufferRenderbuffer(GL.GL_DRAW_FRAMEBUFFER, GL.GL_COLOR_ATTACHMENT0, GL.GL_RENDERBUFFER, rn.render_buf_noms)
+
+        rn.z_buf_noms = GL.glGenRenderbuffers(1)
+        GL.glBindRenderbuffer(GL.GL_RENDERBUFFER, rn.z_buf_noms)
+        GL.glRenderbufferStorageMultisample(GL.GL_RENDERBUFFER,0 , GL.GL_DEPTH_COMPONENT, rn.frustum['width'], rn.frustum['height'])
+        GL.glFramebufferRenderbuffer(GL.GL_FRAMEBUFFER, GL.GL_DEPTH_ATTACHMENT, GL.GL_RENDERBUFFER, rn.z_buf_noms)
+
+        GL.glEnable(GL.GL_DEPTH_TEST)
+        GL.glPolygonMode(GL.GL_FRONT_AND_BACK, GL.GL_FILL)
+        GL.glDisable(GL.GL_CULL_FACE)
+
+        GL.glClear(GL.GL_COLOR_BUFFER_BIT)
+        GL.glClear(GL.GL_DEPTH_BUFFER_BIT)
+
+        #print ("FRAMEBUFFER ERR: " + str(GL.glCheckFramebufferStatus(GL.GL_FRAMEBUFFER)))
+        assert (GL.glCheckFramebufferStatus(GL.GL_FRAMEBUFFER) == GL.GL_FRAMEBUFFER_COMPLETE)
+
+        GL.glBindFramebuffer(GL.GL_FRAMEBUFFER,0)
+        # GL.glClear(GL.GL_COLOR_BUFFER_BIT)
+        # GL.glClear(GL.GL_DEPTH_BUFFER_BIT)
+
+
+        rn.vao_static = GL.GLuint(0)
+        GL.glGenVertexArrays(1, rn.vao_static)
+        GL.glBindVertexArray(rn.vao_static)
+
+        ############################
+        # ENABLE SHADER
+
+        FRAGMENT_SHADER = shaders.compileShader("""#version 330 core
+        // Interpolated values from the vertex shaders
+        in vec3 theColor;
+        // Ouput data
+        out vec3 color;
+        void main(){
+            color = theColor;
+        }""", GL.GL_FRAGMENT_SHADER)
+
+
+        VERTEX_SHADER = shaders.compileShader("""#version 330 core
+        // Input vertex data, different for all executions of this shader.
+        layout (location = 0) in vec3 position;
+        layout (location = 1) in vec3 color;
+        uniform mat4 MVP;
+        out vec3 theColor;
+        // Values that stay constant for the whole mesh.
+        void main(){
+            // Output position of the vertex, in clip space : MVP * position
+            gl_Position =  MVP* vec4(position,1);
+            theColor = color;
+        }""", GL.GL_VERTEX_SHADER)
+
+        rn.colorProgram = shaders.compileProgram(VERTEX_SHADER,FRAGMENT_SHADER)
+
+        shaders.glUseProgram(rn.colorProgram)
+
+        FRAGMENT_SHADER_NOPERSP = shaders.compileShader("""#version 330 core
+        // Interpolated values from the vertex shaders
+        in vec3 theColor;
+        //noperspective in vec3 theColor;
+        // Ouput data
+        out vec3 color;
+        void main(){
+            color = color.xyz;
+        }""", GL.GL_FRAGMENT_SHADER)
+
+        VERTEX_SHADER_NOPERSP = shaders.compileShader("""#version 330 core
+        // Input vertex data, different for all executions of this shader.
+        layout (location = 0) in vec3 position;
+        layout (location = 1) in vec3 color;
+        uniform mat4 MVP;
+        out vec3 theColor;
+        //noperspective out vec3 theColor;
+        // Values that stay constant for the whole mesh.
+        void main(){
+            // Output position of the vertex, in clip space : MVP * position
+            gl_Position =  MVP* vec4(position,1);
+            theColor = color;
+        }""", GL.GL_VERTEX_SHADER)
+
+        rn.colorProgram_noperspective = shaders.compileProgram(VERTEX_SHADER_NOPERSP,FRAGMENT_SHADER_NOPERSP)
+
+        # rn.colorProgram = shaders.compileProgram(VERTEX_SHADER,FRAGMENT_SHADER)
+
+        position_location = GL.glGetAttribLocation(rn.colorProgram, 'position')
+        color_location = GL.glGetAttribLocation(rn.colorProgram, 'color')
+        # color_location_ub = GL.glGetAttribLocation(rn.colorProgram, 'color')
+        rn.MVP_location = GL.glGetUniformLocation(rn.colorProgram, 'MVP')
+        #
+        GL.glClear(GL.GL_COLOR_BUFFER_BIT)
+        GL.glClear(GL.GL_DEPTH_BUFFER_BIT)
+
+        indices = np.array(rn.f, dtype=np.uint32)
+        rn.vbo_indices = vbo.VBO(indices, target=GL.GL_ELEMENT_ARRAY_BUFFER)
+        rn.vbo_indices_range = vbo.VBO(np.arange(rn.f.size, dtype=np.uint32).ravel(), target=GL.GL_ELEMENT_ARRAY_BUFFER)
+        rn.vbo_indices_dyn = vbo.VBO(indices, target=GL.GL_ELEMENT_ARRAY_BUFFER)
+
+        rn.vbo_verts = vbo.VBO(np.array(rn.v, dtype=np.float32))
+        # glGenBuffers(1, &vboID);
+        # glBindBuffer(GL_VERTEX_ARRAY, vboID);
+        # glBufferData(GL_VERTEX_ARRAY, 3 * sizeof(Vertex), &vertices[0], GL_STATIC_DRAW);
+        # glBindBuffer(GL_VERTEX_ARRAY, NULL);
+
+
+        rn.vbo_verts_face = vbo.VBO(rn.verts_by_face.astype(np.float32))
+
+        rn.vbo_verts_dyn = vbo.VBO(np.array(rn.v, dtype=np.float32))
+
+        rn.vbo_colors =  vbo.VBO(np.array(rn.vc, dtype=np.float32))
+
+        rn.vbo_colors_face = vbo.VBO(np.array(rn.vc_by_face, dtype=np.float32))
+
+        GL.glBindVertexArray(rn.vao_static)
+
+        rn.vbo_indices.bind()
+
+        rn.vbo_verts.bind()
+        GL.glEnableVertexAttribArray(position_location) # from 'location = 0' in shader
+        GL.glVertexAttribPointer(position_location, 3, GL.GL_FLOAT, GL.GL_FALSE, 0, None)
+
+        rn.vbo_colors.bind()
+        GL.glEnableVertexAttribArray(color_location) # from 'location = 0' in shader
+        GL.glVertexAttribPointer(color_location, 3, GL.GL_FLOAT, GL.GL_FALSE, 0, None)
+
+        GL.glBindVertexArray(0)
+
+        rn.vao_static_face = GL.GLuint(0)
+        GL.glGenVertexArrays(1, self.vao_static_face)
+        GL.glBindVertexArray(self.vao_static_face)
+
+        rn.vbo_indices_range.bind()
+
+        rn.vbo_verts_face.bind()
+        GL.glEnableVertexAttribArray(position_location) # from 'location = 0' in shader
+        GL.glVertexAttribPointer(position_location, 3, GL.GL_FLOAT, GL.GL_FALSE, 0, None)
+
+        rn.vbo_colors_face.bind()
+        GL.glEnableVertexAttribArray(color_location) # from 'location = 0' in shader
+        GL.glVertexAttribPointer(color_location, 3, GL.GL_FLOAT, GL.GL_FALSE, 0, None)
+
+        GL.glBindVertexArray(0)
+
+        rn.vao_dyn = GL.GLuint(0)
+        GL.glGenVertexArrays(1, rn.vao_dyn)
+        GL.glBindVertexArray(rn.vao_dyn)
+
+        #Can arrays be empty?
+
+        rn.vbo_indices_dyn.bind()
+
+        rn.vbo_verts_dyn.bind()
+        GL.glEnableVertexAttribArray(position_location) # from 'location = 0' in shader
+        GL.glVertexAttribPointer(position_location, 3, GL.GL_FLOAT, GL.GL_FALSE, 0, None)
+
+        rn.vbo_colors.bind()
+        GL.glEnableVertexAttribArray(color_location) # from 'location = 0' in shader
+        GL.glVertexAttribPointer(color_location, 3, GL.GL_FLOAT, GL.GL_FALSE, 0, None)
+
+        GL.glBindVertexArray(0)
+
+        rn.vao_dyn_ub = GL.GLuint(0)
+        GL.glGenVertexArrays(1, rn.vao_dyn_ub)
+        GL.glBindVertexArray(rn.vao_dyn_ub)
+
+        rn.vbo_indices_dyn.bind()
+
+        rn.vbo_verts_dyn.bind()
+        GL.glEnableVertexAttribArray(position_location) # from 'location = 0' in shader
+        GL.glVertexAttribPointer(position_location, 3, GL.GL_FLOAT, GL.GL_FALSE, 0, None)
+
+        rn.vbo_colors_ub = vbo.VBO(np.array(np.array(rn.vc, dtype=np.uint8)))
+
+        rn.vbo_colors_ub.bind()
+        GL.glEnableVertexAttribArray(color_location) # from 'location = 0' in shader
+        GL.glVertexAttribPointer(color_location, 3, GL.GL_UNSIGNED_BYTE, GL.GL_TRUE, 0, None)
+
+        rn.initialized = True
+
 
 
     def render_vertex_color(self, vertices, faces=None, img=None,

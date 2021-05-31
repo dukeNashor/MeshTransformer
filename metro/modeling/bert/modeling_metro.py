@@ -10,8 +10,8 @@ import logging
 import code
 import torch
 from torch import nn
-from .modeling_bert import BertPreTrainedModel, BertEmbeddings, BertEncoder, BertPooler
-from .modeling_bert import BertLayerNorm as LayerNormClass
+from transformers.pytorch_transformers.modeling_bert import BertPreTrainedModel, BertEmbeddings, BertEncoder, BertPooler
+from transformers.pytorch_transformers.modeling_bert import BertLayerNorm as LayerNormClass
 import metro.modeling.data.config as cfg
 
 class METRO_Encoder(BertPreTrainedModel):
